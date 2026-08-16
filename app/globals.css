@@ -1,27 +1,30 @@
 @import "tailwindcss";
 
 :root {
-  --paper: #f3eee4;
-  --paper-deep: #e7dfd0;
-  --ink: #241c16;
-  --ink-soft: #5c5146;
-  --rule: #cbbba4;
-  --accent: #1b5854;
-  --accent-2: #b5472a;
-  --card: #fffaf2;
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --text: #171717;
+  --muted: #737373;
+  --border: #e7e5e4;
+  --border-strong: #d6d3d1;
+  --accent: #171717;
+  --danger: #b42318;
+  --ok: #0f7a4d;
+  --sidebar: #111110;
+  --sidebar-text: #d6d3d1;
+  --sidebar-muted: #a8a29e;
+  --sidebar-active: #ffffff;
 }
 
 html,
 body {
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100%;
 }
 
 body {
-  background-image:
-    radial-gradient(1200px 500px at 10% -10%, rgba(27, 88, 84, 0.08), transparent 55%),
-    linear-gradient(180deg, rgba(255, 250, 242, 0.7), transparent 28%);
-  min-height: 100vh;
+  font-feature-settings: "ss01" on, "cv11" on;
 }
 
 a {
@@ -30,5 +33,58 @@ a {
 }
 
 ::selection {
-  background: rgba(27, 88, 84, 0.2);
+  background: #e7e5e4;
+}
+
+input,
+textarea,
+button,
+select {
+  font: inherit;
+}
+
+.field {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 8px 12px;
+  outline: none;
+}
+
+.field:focus {
+  border-color: var(--text);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-ghost {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
 }

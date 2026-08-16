@@ -1,38 +1,32 @@
 import type { Metadata } from "next";
-import { Figtree, Newsreader } from "next/font/google";
-import { Nav } from "@/components/nav";
+import { Inter } from "next/font/google";
+import { AppShell } from "@/components/app-shell";
+import { getAiPublicState } from "@/lib/ai-settings";
+import { getDb } from "@/lib/db";
 import "./globals.css";
 
-const display = Newsreader({
+const sans = Inter({
   subsets: ["latin"],
-  variable: "--font-display",
-  display: "swap",
-});
-
-const sans = Figtree({
-  subsets: ["latin"],
-  variable: "--font-sans",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Tracker — monthly journal digest",
-  description:
-    "Track scientific journals, score new papers against your prompt, and read a monthly structured report.",
+  title: "Tracker",
+  description: "Monthly journal digest from the titles you follow.",
 };
+
+export const dynamic = "force-dynamic";
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const ai = getAiPublicState(getDb());
   return (
     <html lang="en">
-      <body className={`${display.variable} ${sans.variable} font-[var(--font-sans)] antialiased`}>
-        <div className="mx-auto max-w-5xl px-6 pb-20 pt-8">
-          <Nav />
-          {children}
-        </div>
+      <body className={`${sans.className} antialiased`}>
+        <AppShell ai={ai}>{children}</AppShell>
       </body>
     </html>
   );

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resolveAiConfig } from "./ai-settings";
+import { recordAiUsage, resolveAiConfig } from "./ai-settings";
 import { getDb } from "./db";
 
 export const PaperScoreSchema = z.object({
@@ -64,6 +64,9 @@ async function completeJson<T>(
   const content = completion.choices[0]?.message?.content;
   if (!content) {
     throw new Error("The model returned an empty response.");
+  }
+  if (completion.usage) {
+    recordAiUsage(getDb(), completion.usage);
   }
   return schema.parse(JSON.parse(content));
 }

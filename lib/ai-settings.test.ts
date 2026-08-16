@@ -47,6 +47,7 @@ describe("AI settings", () => {
     const publicState = getAiPublicState(db);
     expect(publicState.configured).toBe(true);
     expect(publicState.apiKeyHint).toBe("••••9999");
+    expect(publicState.usage.requests).toBe(0);
     expect(JSON.stringify(publicState)).not.toContain("sk-secret-key-9999");
     expect(resolveAiConfig(db).apiKey).toBe("sk-secret-key-9999");
   });

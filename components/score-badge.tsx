@@ -1,11 +1,7 @@
 export function ScoreBadge({ score }: { score: number }) {
-  const rounded = Math.round(score);
   return (
-    <span className="inline-flex min-w-12 items-baseline justify-end font-[var(--font-display)] text-2xl tabular-nums text-[var(--accent-2)]">
-      {rounded}
-      <span className="ml-1 text-xs font-[var(--font-sans)] uppercase tracking-wider text-[var(--ink-soft)]">
-        pts
-      </span>
+    <span className="shrink-0 rounded-md bg-[var(--bg)] px-2 py-1 text-sm font-medium tabular-nums">
+      {Math.round(score)}
     </span>
   );
 }

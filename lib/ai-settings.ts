@@ -5,7 +5,10 @@ import {
   type ProviderId,
 } from "./ai-providers";
 import type { TrackerDb } from "./db";
+import { formatTokenCount } from "./format";
 import { settings } from "./schema";
+
+export { formatTokenCount };
 
 export type AiConfig = {
   provider: ProviderId;
@@ -13,6 +16,20 @@ export type AiConfig = {
   apiKey: string;
   baseURL?: string;
   source: "ui" | "env";
+};
+
+export type AiUsage = {
+  promptTokens: number;
+  completionTokens: number;
+  requests: number;
+  lastUsed: string | null;
+};
+
+export type AiRemoteUsage = {
+  label: string;
+  used: number;
+  limit: number | null;
+  unit: "usd" | "count";
 };
 
 export type AiPublicState = {
@@ -23,6 +40,9 @@ export type AiPublicState = {
   apiKeySet: boolean;
   apiKeyHint: string | null;
   source: "ui" | "env" | "none";
+  models: string[];
+  usage: AiUsage;
+  remote: AiRemoteUsage | null;
 };
 
 export type AiSettingsInput = {
@@ -37,6 +57,76 @@ function getSetting(db: TrackerDb, key: string): string | null {
   return (
     db.select().from(settings).where(eq(settings.key, key)).get()?.value ?? null
   );
+}
+
+function numberSetting(db: TrackerDb, key: string): number {
+  const raw = getSetting(db, key);
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function getAiUsage(db: TrackerDb): AiUsage {
+  return {
+    promptTokens: numberSetting(db, "ai_prompt_tokens"),
+    completionTokens: numberSetting(db, "ai_completion_tokens"),
+    requests: numberSetting(db, "ai_requests"),
+    lastUsed: getSetting(db, "ai_last_used"),
+  };
+}
+
+export function recordAiUsage(
+  db: TrackerDb,
+  usage: { prompt_tokens?: number; completion_tokens?: number },
+) {
+  const current = getAiUsage(db);
+  setSetting(
+    db,
+    "ai_prompt_tokens",
+    String(current.promptTokens + (usage.prompt_tokens ?? 0)),
+  );
+  setSetting(
+    db,
+    "ai_completion_tokens",
+    String(current.completionTokens + (usage.completion_tokens ?? 0)),
+  );
+  setSetting(db, "ai_requests", String(current.requests + 1));
+  setSetting(db, "ai_last_used", new Date().toISOString());
+}
+
+export function getCachedModels(db: TrackerDb): string[] {
+  const raw = getSetting(db, "ai_models_json");
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter((item) => typeof item === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+export function cacheModels(db: TrackerDb, models: string[]) {
+  setSetting(db, "ai_models_json", JSON.stringify(models));
+}
+
+function skipModel(id: string): boolean {
+  return /embedding|whisper|tts|dall-e|moderation|transcribe|realtime|audio|image/i.test(
+    id,
+  );
+}
+
+export function mergeModelLists(
+  fetched: string[],
+  provider: ProviderId,
+  current?: string,
+): string[] {
+  const defaults = AI_PROVIDERS[provider].models;
+  const filtered = fetched.filter((id) => !skipModel(id));
+  const unique = [
+    ...new Set([...defaults, ...filtered, current].filter(Boolean) as string[]),
+  ];
+  return unique.slice(0, 80);
 }
 
 function setSetting(db: TrackerDb, key: string, value: string) {
@@ -139,6 +229,11 @@ export function resolveAiConfig(db: TrackerDb): AiConfig {
 }
 
 export function getAiPublicState(db: TrackerDb): AiPublicState {
+  const extras = {
+    models: mergeModelLists(getCachedModels(db), "openai"),
+    usage: getAiUsage(db),
+    remote: null as AiRemoteUsage | null,
+  };
   const ui = readUiConfig(db);
   if (ui) {
     const storedKey = getSetting(db, "ai_api_key")?.trim() || "";
@@ -150,6 +245,9 @@ export function getAiPublicState(db: TrackerDb): AiPublicState {
       apiKeySet: Boolean(storedKey) || !AI_PROVIDERS[ui.provider].needsKey,
       apiKeyHint: storedKey ? maskApiKey(storedKey) : null,
       source: "ui",
+      models: mergeModelLists(getCachedModels(db), ui.provider, ui.model),
+      usage: extras.usage,
+      remote: null,
     };
   }
   const env = readEnvConfig();
@@ -162,6 +260,9 @@ export function getAiPublicState(db: TrackerDb): AiPublicState {
       apiKeySet: true,
       apiKeyHint: maskApiKey(env.apiKey),
       source: "env",
+      models: mergeModelLists(getCachedModels(db), env.provider, env.model),
+      usage: extras.usage,
+      remote: null,
     };
   }
   return {
@@ -172,6 +273,9 @@ export function getAiPublicState(db: TrackerDb): AiPublicState {
     apiKeySet: false,
     apiKeyHint: null,
     source: "none",
+    models: AI_PROVIDERS.openai.models,
+    usage: extras.usage,
+    remote: null,
   };
 }
 
@@ -239,4 +343,37 @@ async function defaultTestComplete(
     throw new Error("The model connected but returned an empty reply.");
   }
   return content;
+}
+
+export async function fetchProviderModels(
+  config: Pick<AiConfig, "apiKey" | "baseURL" | "provider" | "model">,
+): Promise<string[]> {
+  const { default: OpenAI } = await import("openai");
+  const client = new OpenAI({
+    apiKey: config.apiKey,
+    baseURL: config.baseURL,
+  });
+  const list = await client.models.list();
+  const ids = list.data.map((model) => model.id);
+  return mergeModelLists(ids, config.provider, config.model);
+}
+
+export async function fetchOpenRouterUsage(
+  apiKey: string,
+): Promise<AiRemoteUsage | null> {
+  const response = await fetch("https://openrouter.ai/api/v1/key", {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  if (!response.ok) return null;
+  const payload = (await response.json()) as {
+    data?: { usage?: number; limit?: number | null; label?: string };
+  };
+  const data = payload.data;
+  if (!data) return null;
+  return {
+    label: data.label || "OpenRouter credits",
+    used: data.usage ?? 0,
+    limit: data.limit ?? null,
+    unit: "usd",
+  };
 }

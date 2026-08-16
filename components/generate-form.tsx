@@ -19,21 +19,14 @@ export function GenerateForm({ aiReady }: { aiReady: boolean }) {
   const [log, setLog] = useState<ProgressEvent[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const latest = log.at(-1);
 
   if (!aiReady) {
     return (
-      <div className="border border-[var(--rule)] bg-[var(--card)] p-5">
-        <p className="font-[var(--font-display)] text-2xl">AI is not connected</p>
-        <p className="mt-2 text-sm text-[var(--ink-soft)]">
-          Connect a provider before generating a digest. It takes a key and a model name.
-        </p>
-        <Link
-          href="/setup"
-          className="mt-4 inline-block bg-[var(--accent)] px-4 py-2 text-sm text-[var(--card)]"
-        >
-          Set up AI
+      <div className="panel flex items-center justify-between gap-4 px-4 py-4">
+        <p className="text-sm text-[var(--muted)]">Connect a model first.</p>
+        <Link href="/setup" className="btn btn-primary">
+          Model
         </Link>
       </div>
     );
@@ -94,35 +87,29 @@ export function GenerateForm({ aiReady }: { aiReady: boolean }) {
   }
 
   return (
-    <form onSubmit={generate} className="space-y-8">
-      <label className="block max-w-xs">
-        <span className="text-xs uppercase tracking-[0.22em] text-[var(--ink-soft)]">
-          Month
-        </span>
+    <form onSubmit={generate} className="panel max-w-md p-5">
+      <label className="block">
+        <span className="mb-1.5 block text-xs text-[var(--muted)]">Month</span>
         <input
           type="month"
           value={month}
           onChange={(event) => setMonth(event.target.value)}
-          className="mt-2 w-full border border-[var(--rule)] bg-[var(--card)] px-3 py-2 outline-none focus:border-[var(--accent)]"
+          className="field"
         />
       </label>
-      <button
-        type="submit"
-        disabled={busy}
-        className="bg-[var(--accent)] px-4 py-2 text-sm text-[var(--card)] disabled:opacity-50"
-      >
-        {busy ? "Working…" : "Fetch, score, and write report"}
+      <button type="submit" disabled={busy} className="btn btn-primary mt-4">
+        {busy ? "Working…" : "Generate"}
       </button>
 
       {latest ? (
-        <div>
-          <div className="h-1 bg-[var(--paper-deep)]">
+        <div className="mt-5">
+          <div className="h-1 rounded-full bg-[var(--bg)]">
             <div
-              className="h-1 bg-[var(--accent)] transition-all"
+              className="h-1 rounded-full bg-[var(--text)] transition-all"
               style={{ width: `${Math.round(latest.progress * 100)}%` }}
             />
           </div>
-          <ol className="mt-4 space-y-1 text-sm text-[var(--ink-soft)]">
+          <ol className="mt-3 space-y-1 text-xs text-[var(--muted)]">
             {log.map((item, index) => (
               <li key={`${item.message}-${index}`}>{item.message}</li>
             ))}
@@ -130,7 +117,7 @@ export function GenerateForm({ aiReady }: { aiReady: boolean }) {
         </div>
       ) : null}
 
-      {error ? <p className="text-sm text-[var(--accent-2)]">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm text-[var(--danger)]">{error}</p> : null}
     </form>
   );
 }

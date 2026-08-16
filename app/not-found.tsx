@@ -1,10 +1,8 @@
 export default function NotFound() {
   return (
     <main>
-      <h1 className="font-[var(--font-display)] text-4xl">Not found</h1>
-      <p className="mt-3 text-[var(--ink-soft)]">
-        That page or monthly report does not exist yet. Generate the month first.
-      </p>
+      <h1 className="text-lg font-semibold">Not found</h1>
+      <p className="mt-1 text-sm text-[var(--muted)]">That report is not here yet.</p>
     </main>
   );
 }
