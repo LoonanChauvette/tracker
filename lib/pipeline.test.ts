@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { openDatabase, type TrackerDb } from "@/lib/db";
 import { generateMonth, rankPapers } from "@/lib/pipeline";
+import { settings } from "@/lib/schema";
 import { EAR_AND_HEARING } from "@/lib/seed";
 import type { CrossrefWork } from "@/lib/crossref";
 
@@ -65,6 +66,10 @@ describe("pipeline", () => {
   it("generates a monthly Ear and Hearing report from fixtures", async () => {
     const { db, dir } = tempDb();
     dirs.push(dir);
+    db.insert(settings)
+      .values({ key: "top_n", value: "2" })
+      .onConflictDoUpdate({ target: settings.key, set: { value: "2" } })
+      .run();
 
     const report = await generateMonth(db, "2026-03", () => undefined, {
       fetchMonthWorks: async () => fixtures,
