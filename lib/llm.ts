@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { resolveAiConfig } from "./ai-settings";
+import { getDb } from "./db";
 
 export const PaperScoreSchema = z.object({
   doi: z.string(),
@@ -35,23 +37,8 @@ export type RankedPaperInput = ScoreablePaper & {
   url: string;
 };
 
-function modelName(): string {
-  return process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini";
-}
-
-function clientOptions() {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error(
-      "OPENAI_API_KEY is not set. Add it to .env.local and restart the server.",
-    );
-  }
-  const baseURL = process.env.OPENAI_BASE_URL?.trim();
-  return { apiKey, baseURL: baseURL || undefined };
-}
-
 export function getModelName(): string {
-  return modelName();
+  return resolveAiConfig(getDb()).model;
 }
 
 async function completeJson<T>(
@@ -59,10 +46,14 @@ async function completeJson<T>(
   system: string,
   user: string,
 ): Promise<T> {
+  const config = resolveAiConfig(getDb());
   const { default: OpenAI } = await import("openai");
-  const client = new OpenAI(clientOptions());
+  const client = new OpenAI({
+    apiKey: config.apiKey,
+    baseURL: config.baseURL,
+  });
   const completion = await client.chat.completions.create({
-    model: modelName(),
+    model: config.model,
     response_format: { type: "json_object" },
     temperature: 0.2,
     messages: [

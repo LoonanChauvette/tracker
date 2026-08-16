@@ -2,8 +2,9 @@ import { and, desc, eq } from "drizzle-orm";
 import { fetchMonthWorks, getJournal, type CrossrefWork } from "./crossref";
 import { monthLabel } from "./dates";
 import { sha256 } from "./hash";
+import { resolveAiConfig } from "./ai-settings";
+import { getDb } from "./db";
 import {
-  getModelName,
   scorePapers,
   synthesizeReport,
   type RankedPaperInput,
@@ -27,7 +28,7 @@ export const defaultGenerateDeps: GenerateDeps = {
   fetchMonthWorks,
   scorePapers,
   synthesizeReport,
-  getModelName,
+  getModelName: () => resolveAiConfig(getDb()).model,
 };
 
 export function getPrompt(db: TrackerDb): string {

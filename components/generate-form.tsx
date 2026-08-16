@@ -1,6 +1,7 @@
 "use client";
 
 import { lastCalendarMonth } from "@/lib/dates";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -11,7 +12,7 @@ type ProgressEvent = {
   month?: string;
 };
 
-export function GenerateForm() {
+export function GenerateForm({ aiReady }: { aiReady: boolean }) {
   const router = useRouter();
   const defaultMonth = useMemo(() => lastCalendarMonth(), []);
   const [month, setMonth] = useState(defaultMonth);
@@ -20,6 +21,23 @@ export function GenerateForm() {
   const [error, setError] = useState<string | null>(null);
 
   const latest = log.at(-1);
+
+  if (!aiReady) {
+    return (
+      <div className="border border-[var(--rule)] bg-[var(--card)] p-5">
+        <p className="font-[var(--font-display)] text-2xl">AI is not connected</p>
+        <p className="mt-2 text-sm text-[var(--ink-soft)]">
+          Connect a provider before generating a digest. It takes a key and a model name.
+        </p>
+        <Link
+          href="/setup"
+          className="mt-4 inline-block bg-[var(--accent)] px-4 py-2 text-sm text-[var(--card)]"
+        >
+          Set up AI
+        </Link>
+      </div>
+    );
+  }
 
   async function generate(event: React.FormEvent) {
     event.preventDefault();
